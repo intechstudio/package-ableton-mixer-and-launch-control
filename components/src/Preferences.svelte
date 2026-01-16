@@ -51,7 +51,7 @@
     <Block>
       <BlockTitle>
         <div class="flex flex-row content-center">
-          Websocket Preference <div
+         Websocket Preference <div
             style="margin-left: 12px; width: 12px; height: 12px; border-radius: 50%; background-color: {currentlyConnected
               ? '#00D248'
               : '#fb2323'}"
