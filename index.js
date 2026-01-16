@@ -1,218 +1,177 @@
 const fs = require("fs");
 const path = require("path");
-const WebSocket = require("ws");
+const os = require("os");
 
-const websocketPort = 9834;
-let activeWindowTitle = "Firefox";
-
-let wss = undefined;
-let clientWs = undefined;
 let controller;
 let preferenceMessagePort = undefined;
 
-let watchForActiveWindow = false;
-let isWindowActive = false;
+// Default Ableton User Library Remote Scripts path
+function getAbletonScriptsPath() {
+  const homedir = os.homedir();
+  const platform = os.platform();
 
-let actionId = 0;
+  if (platform === "darwin") {
+    // macOS: /Users/[username]/Music/Ableton/User Library/Remote Scripts
+    return path.join(
+      homedir,
+      "Music",
+      "Ableton",
+      "User Library",
+      "Remote Scripts",
+    );
+  } else {
+    // Windows: C:\Users\[username]\Documents\Ableton\User Library\Remote Scripts
+    return path.join(
+      homedir,
+      "Documents",
+      "Ableton",
+      "User Library",
+      "Remote Scripts",
+    );
+  }
+}
+
+function getScriptsFolders() {
+  const scriptsPath = path.resolve(__dirname, "scripts");
+  try {
+    const entries = fs.readdirSync(scriptsPath, { withFileTypes: true });
+    return entries
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
+  } catch (error) {
+    console.error("Error reading scripts folder:", error);
+    return [];
+  }
+}
+
+function copyFolderRecursive(source, destination) {
+  // Create destination folder if it doesn't exist
+  if (!fs.existsSync(destination)) {
+    fs.mkdirSync(destination, { recursive: true });
+  }
+
+  const entries = fs.readdirSync(source, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const sourcePath = path.join(source, entry.name);
+    const destPath = path.join(destination, entry.name);
+
+    if (entry.isDirectory()) {
+      copyFolderRecursive(sourcePath, destPath);
+    } else {
+      fs.copyFileSync(sourcePath, destPath);
+    }
+  }
+}
 
 exports.loadPackage = async function (gridController, persistedData) {
   controller = gridController;
-  let actionIconSvg = fs.readFileSync(
-    path.resolve(__dirname, "websocket-action-icon.svg"),
-    { encoding: "utf-8" },
-  );
-
-  console.log({ persistedData });
-  watchForActiveWindow = persistedData?.watchForActiveWindow ?? false;
-
-  function createAction(overrides) {
-    gridController.sendMessageToEditor({
-      type: "add-action",
-      info: {
-        actionId: actionId++,
-        rendering: "standard",
-        category: "websocket",
-        color: "#00a827",
-        icon: actionIconSvg,
-        blockIcon: actionIconSvg,
-        selectable: true,
-        movable: true,
-        hideIcon: false,
-        type: "single",
-        toggleable: true,
-        ...overrides,
-      },
-    });
-  }
-
-  createAction({
-    short: "xwsps",
-    displayName: "Parameter Set",
-    defaultLua: 'gps("package-websocket", "volume", self:get_auto_value())',
-    actionComponent: "websocket-parameter-set-action",
-  });
-
-  wss = new WebSocket.Server({ port: websocketPort });
-
-  console.log(
-    `WebSocket server is listening on ws://localhost:${websocketPort}`,
-  );
-  wss.on("connection", (ws) => {
-    clientWs = ws;
-
-    ws.on("message", handleWebsocketMessage);
-    notifyStatusChange();
-
-    ws.on("close", () => {
-      clientWs = undefined;
-      notifyStatusChange();
-    });
-  });
-
-  if (watchForActiveWindow) {
-    setTimeout(tryActivateActiveWindow, 50);
-  }
+  console.log("Ableton Script Installer package loaded");
 };
 
 exports.unloadPackage = async function () {
-  while (--actionId >= 0) {
-    controller.sendMessageToEditor({
-      type: "remove-action",
-      actionId,
-    });
-  }
-  clientWs?.close();
-  wss?.close();
   preferenceMessagePort?.close();
-  if (watchForActiveWindow) {
-    clearTimeout(activeWindowSubscribeTimeoutId);
-    controller.sendMessageToEditor({
-      type: "send-package-message",
-      targetPackageId: "package-active-win",
-      message: {
-        type: "unsubscribe",
-      },
-    });
-  }
 };
 
 exports.addMessagePort = async function (port, senderId) {
   if (senderId == "preferences") {
     preferenceMessagePort?.close();
     preferenceMessagePort = port;
+
     port.on("close", () => {
       preferenceMessagePort = undefined;
     });
+
     port.on("message", (e) => {
-      console.log({ e });
-      if (e.data.type === "set-setting") {
-        console.log({ data: e.data });
-        if (watchForActiveWindow !== e.data.watchForActiveWindow) {
-          watchForActiveWindow = e.data.watchForActiveWindow;
-          if (watchForActiveWindow) {
-            tryActivateActiveWindow();
-          } else {
-            clearTimeout(activeWindowSubscribeTimeoutId);
-            controller.sendMessageToEditor({
-              type: "send-package-message",
-              targetPackageId: "package-active-win",
-              message: {
-                type: "unsubscribe",
-              },
-            });
-          }
-        }
-        controller.sendMessageToEditor({
-          type: "persist-data",
-          data: {
-            watchForActiveWindow,
-          },
+      const data = e.data;
+      console.log("Received message:", data);
+
+      if (data.type === "get-folders") {
+        const folders = getScriptsFolders();
+        port.postMessage({
+          type: "folders-list",
+          folders: folders,
         });
+      } else if (data.type === "install-script") {
+        const folderName = data.folderName;
+        const sourcePath = path.resolve(__dirname, "scripts", folderName);
+        const destPath = path.join(
+          getAbletonScriptsPath(),
+          "Grid_mixer_launch_control",
+        );
+
+        try {
+          // Check if source folder exists
+          if (!fs.existsSync(sourcePath)) {
+            const errorMsg = `Source folder not found: ${sourcePath}`;
+            console.error(errorMsg);
+            port.postMessage({
+              type: "install-result",
+              success: false,
+              error: errorMsg,
+              folderName: folderName,
+            });
+            return;
+          }
+
+          // Ensure the Remote Scripts folder exists
+          const remoteScriptsPath = getAbletonScriptsPath();
+          if (!fs.existsSync(remoteScriptsPath)) {
+            fs.mkdirSync(remoteScriptsPath, { recursive: true });
+          }
+
+          // Remove existing destination folder if it exists
+          if (fs.existsSync(destPath)) {
+            fs.rmSync(destPath, { recursive: true, force: true });
+          }
+
+          // Copy the folder
+          copyFolderRecursive(sourcePath, destPath);
+
+          console.log(`Successfully installed ${folderName} to ${destPath}`);
+          port.postMessage({
+            type: "install-result",
+            success: true,
+            folderName: folderName,
+            destPath: destPath,
+          });
+
+          // Also show a toast message in the Editor
+          controller.sendMessageToEditor({
+            type: "show-message",
+            message: `Successfully installed ${folderName} to Ableton Remote Scripts folder!`,
+            messageType: "success",
+          });
+        } catch (error) {
+          const errorMsg = `Failed to install ${folderName}: ${error.message}`;
+          console.error(errorMsg, error);
+          port.postMessage({
+            type: "install-result",
+            success: false,
+            error: errorMsg,
+            folderName: folderName,
+          });
+
+          controller.sendMessageToEditor({
+            type: "show-message",
+            message: errorMsg,
+            messageType: "fail",
+          });
+        }
       }
     });
+
     port.start();
-    notifyStatusChange();
+
+    // Send initial folder list
+    const folders = getScriptsFolders();
+    port.postMessage({
+      type: "folders-list",
+      folders: folders,
+    });
   }
 };
 
 exports.sendMessage = async function (args) {
-  console.log({ args });
-  if (Array.isArray(args)) {
-    if (watchForActiveWindow && !isWindowActive) {
-      console.log("Window is not active, ignoring message!");
-      return;
-    }
-    if (!clientWs) {
-      console.log("Websocket Client not connected!");
-      controller.sendMessageToEditor({
-        type: "show-message",
-        message:
-          "Websocket is not connected! Check if Websocket client connected to server!",
-        messageType: "fail",
-      });
-      return;
-    }
-    clientWs?.send(
-      JSON.stringify({
-        event: "set",
-        id: args[0],
-        value: args[1],
-      }),
-    );
-  } else {
-    if (args.type === "active-window-status") {
-      clearTimeout(activeWindowSubscribeTimeoutId);
-      isWindowActive = args.status;
-    }
-  }
+  console.log("sendMessage received:", args);
 };
-
-let activeWindowSubscribeTimeoutId = undefined;
-function tryActivateActiveWindow() {
-  activeWindowSubscribeTimeoutId = setTimeout(
-    activeWindowRequestNoResponse,
-    50,
-  );
-  controller.sendMessageToEditor({
-    type: "send-package-message",
-    targetPackageId: "package-active-win",
-    message: {
-      type: "subscribe",
-      filter: activeWindowTitle,
-      target: "application",
-    },
-  });
-}
-
-function activeWindowRequestNoResponse() {
-  activeWindowSubscribeTimeoutId = undefined;
-  controller.sendMessageToEditor({
-    type: "show-message",
-    message:
-      "Couldn't connect to Active Window package! Make sure it is enabled!",
-    messageType: "fail",
-  });
-  watchForActiveWindow = false;
-  notifyStatusChange();
-}
-
-function handleWebsocketMessage(message) {
-  let data = JSON.parse(message);
-  console.log({ data });
-  if (data.type === "execute-code") {
-    controller.sendMessageToEditor({
-      type: "execute-lua-script",
-      script: data.script,
-      targetDx: data.targetDx,
-      targetDy: data.targetDy,
-    });
-  }
-}
-
-function notifyStatusChange() {
-  preferenceMessagePort?.postMessage({
-    type: "clientStatus",
-    clientConnected: clientWs !== undefined,
-    watchForActiveWindow,
-  });
-}
