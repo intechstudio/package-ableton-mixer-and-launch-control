@@ -135,9 +135,12 @@ class ClipLauncher:
                 if clip_slot.has_clip:
                     clip = clip_slot.clip
                     
-                    # Playing status listener
+                    # Playing status listener - update both LEDs AND colors
                     def make_playing_callback():
-                        return lambda: self.update_clip_leds()
+                        def callback():
+                            self.update_clip_leds()
+                            self._color_manager.send_clip_colors(self._parent.track_offset)
+                        return callback
                     
                     playing_cb = make_playing_callback()
                     if not clip.playing_status_has_listener(playing_cb):
