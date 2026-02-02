@@ -18,17 +18,11 @@ class ClipLauncher:
         self._setup_clip_buttons()
     
     def _setup_clip_buttons(self):
-        """Setup button handlers for clip launch on CHANNEL 5 - 2 separate 4×4 modules"""
+        """Setup button handlers for clip launch on CHANNEL 5 - single 4×4 module"""
         for row in range(GRID_ROWS):
             for col in range(GRID_COLS):
-                # Module 1 (col 0-3): Note 60-75
-                # Module 2 (col 4-7): Note 76-91
-                if col < 4:
-                    # Module 1: 4×4 grid starting at Note 60
-                    note = CLIP_NOTE_START + row * 4 + col
-                else:
-                    # Module 2: 4×4 grid starting at Note 76
-                    note = 76 + row * 4 + (col - 4)
+                # Single 4×4 grid starting at Note 60
+                note = CLIP_NOTE_START + row * 4 + col
                 
                 # IMPORTANT: Clip launch buttons on Channel 5 (MIDI channel 5)
                 btn = ButtonElement(True, MIDI_NOTE_TYPE, CLIP_LAUNCH_CHANNEL, note)

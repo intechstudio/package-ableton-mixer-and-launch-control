@@ -33,11 +33,11 @@ class NavigationComponent:
         self._bank_right_button = None
         if BANK_LEFT_NOTE >= 0:
             self._bank_left_button = ButtonElement(True, MIDI_NOTE_TYPE, 0, BANK_LEFT_NOTE)
-            self._bank_left_button.add_value_listener(lambda v: v > 0 and self._move_track(-8))
+            self._bank_left_button.add_value_listener(lambda v: v > 0 and self._move_track(-4))
         
         if BANK_RIGHT_NOTE >= 0:
             self._bank_right_button = ButtonElement(True, MIDI_NOTE_TYPE, 0, BANK_RIGHT_NOTE)
-            self._bank_right_button.add_value_listener(lambda v: v > 0 and self._move_track(8))
+            self._bank_right_button.add_value_listener(lambda v: v > 0 and self._move_track(4))
         
         # Connect listeners for required navigation
         self._track_left_button.add_value_listener(lambda v: v > 0 and self._move_track(-1))

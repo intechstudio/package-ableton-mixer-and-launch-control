@@ -1,7 +1,7 @@
 """
 Grid Mixer and Launch Control - Mixer Component
 Handles volume, pan, sends, mute, solo, arm controls
-8-TRACK MIXER: 2 modules × 4 tracks
+4-TRACK MIXER: 1 module × 4 tracks
 """
 from _Framework.InputControlElement import MIDI_CC_TYPE, MIDI_NOTE_TYPE
 from _Framework.SliderElement import SliderElement
@@ -9,9 +9,7 @@ from _Framework.ButtonElement import ButtonElement
 from _Framework.MixerComponent import MixerComponent as FrameworkMixer
 from .constants import (MAIN_CHANNEL, NUM_TRACKS,
                       VOLUME_CC_START, PAN_CC_START, SEND_A_CC_START, SEND_B_CC_START,
-                      MUTE_NOTE_START, SOLO_NOTE_START, ARM_NOTE_START,
-                      VOLUME_CC_START_2, PAN_CC_START_2, SEND_A_CC_START_2, SEND_B_CC_START_2,
-                      MUTE_NOTE_START_2, SOLO_NOTE_START_2, ARM_NOTE_START_2)
+                      MUTE_NOTE_START, SOLO_NOTE_START, ARM_NOTE_START)
 
 
 class MixerComponent:
@@ -35,11 +33,11 @@ class MixerComponent:
         self._setup_control_listeners()
     
     def _setup_mixer(self):
-        """Setup framework mixer component for 8 tracks"""
-        self._mixer = FrameworkMixer(NUM_TRACKS, 2)  # 8 tracks, 2 sends
+        """Setup framework mixer component for 4 tracks"""
+        self._mixer = FrameworkMixer(NUM_TRACKS, 2)  # 4 tracks, 2 sends
         
-        # Module 1: Tracks 0-3
-        for i in range(4):
+        # Single module: Tracks 0-3
+        for i in range(NUM_TRACKS):
             vol = SliderElement(MIDI_CC_TYPE, MAIN_CHANNEL, VOLUME_CC_START + i)
             pan = SliderElement(MIDI_CC_TYPE, MAIN_CHANNEL, PAN_CC_START + i)
             sendA = SliderElement(MIDI_CC_TYPE, MAIN_CHANNEL, SEND_A_CC_START + i)
@@ -54,28 +52,11 @@ class MixerComponent:
             strip.set_volume_control(vol)
             strip.set_pan_control(pan)
             strip.set_send_controls((sendA, sendB))
-        
-        # Module 2: Tracks 4-7
-        for i in range(4):
-            vol = SliderElement(MIDI_CC_TYPE, MAIN_CHANNEL, VOLUME_CC_START_2 + i)
-            pan = SliderElement(MIDI_CC_TYPE, MAIN_CHANNEL, PAN_CC_START_2 + i)
-            sendA = SliderElement(MIDI_CC_TYPE, MAIN_CHANNEL, SEND_A_CC_START_2 + i)
-            sendB = SliderElement(MIDI_CC_TYPE, MAIN_CHANNEL, SEND_B_CC_START_2 + i)
-            
-            self._vol_sliders.append(vol)
-            self._pan_sliders.append(pan)
-            self._sendA.append(sendA)
-            self._sendB.append(sendB)
-            
-            strip = self._mixer.channel_strip(i + 4)
-            strip.set_volume_control(vol)
-            strip.set_pan_control(pan)
-            strip.set_send_controls((sendA, sendB))
     
     def _setup_mix_controls(self):
-        """Setup mute, solo, arm buttons for 8 tracks"""
-        # Module 1: Tracks 0-3
-        for i in range(4):
+        """Setup mute, solo, arm buttons for 4 tracks"""
+        # Single module: Tracks 0-3
+        for i in range(NUM_TRACKS):
             mute = ButtonElement(True, MIDI_NOTE_TYPE, MAIN_CHANNEL, MUTE_NOTE_START + i)
             solo = ButtonElement(True, MIDI_NOTE_TYPE, MAIN_CHANNEL, SOLO_NOTE_START + i)
             arm = ButtonElement(True, MIDI_NOTE_TYPE, MAIN_CHANNEL, ARM_NOTE_START + i)
@@ -83,21 +64,6 @@ class MixerComponent:
             mute.add_value_listener(lambda v, i=i: v > 0 and self._toggle_track(i, "mute"))
             solo.add_value_listener(lambda v, i=i: v > 0 and self._toggle_track(i, "solo"))
             arm.add_value_listener(lambda v, i=i: v > 0 and self._toggle_track(i, "arm"))
-            
-            self._mute_buttons.append(mute)
-            self._solo_buttons.append(solo)
-            self._arm_buttons.append(arm)
-        
-        # Module 2: Tracks 4-7
-        for i in range(4):
-            mute = ButtonElement(True, MIDI_NOTE_TYPE, MAIN_CHANNEL, MUTE_NOTE_START_2 + i)
-            solo = ButtonElement(True, MIDI_NOTE_TYPE, MAIN_CHANNEL, SOLO_NOTE_START_2 + i)
-            arm = ButtonElement(True, MIDI_NOTE_TYPE, MAIN_CHANNEL, ARM_NOTE_START_2 + i)
-            
-            track_idx = i + 4
-            mute.add_value_listener(lambda v, idx=track_idx: v > 0 and self._toggle_track(idx, "mute"))
-            solo.add_value_listener(lambda v, idx=track_idx: v > 0 and self._toggle_track(idx, "solo"))
-            arm.add_value_listener(lambda v, idx=track_idx: v > 0 and self._toggle_track(idx, "arm"))
             
             self._mute_buttons.append(mute)
             self._solo_buttons.append(solo)
@@ -137,7 +103,7 @@ class MixerComponent:
             self._arm_buttons[index].send_value(127 if track.arm else 0, True)
     
     def update_mix_leds(self):
-        """Update all mix control LEDs for 8 tracks"""
+        """Update all mix control LEDs for 4 tracks"""
         for i in range(NUM_TRACKS):
             idx = self._parent.track_offset + i
             if idx >= len(self._parent.song().tracks):
@@ -158,7 +124,7 @@ class MixerComponent:
         self._mixer.set_track_offset(offset)
     
     def send_full_state(self):
-        """Send current values of all mixer controls for 8 tracks"""
+        """Send current values of all mixer controls for 4 tracks"""
         for i in range(NUM_TRACKS):
             idx = self._parent.track_offset + i
             if idx >= len(self._parent.song().tracks):

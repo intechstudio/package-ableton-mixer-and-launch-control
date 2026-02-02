@@ -36,8 +36,8 @@ class Grid_mixer_and_launch_control(ControlSurface):
             self._setup_session()
         
         self.schedule_message(INIT_DELAY, self._delayed_setup)
-        self.show_message("Grid Mixer & Launch Control v2.0 - 8x4 GRID")
-        self.log_message("=== 8x4 CLIP GRID VERSION LOADED ===")
+        self.show_message("Grid Mixer & Launch Control v2.0 - 4x4 GRID")
+        self.log_message("=== 4x4 CLIP GRID VERSION LOADED ===")
     
     def _delayed_setup(self):
         """Setup all components after initialization"""
@@ -77,8 +77,8 @@ class Grid_mixer_and_launch_control(ControlSurface):
         
         # Adjust track offset if needed (in case tracks were deleted)
         num_tracks = len(self.song().tracks)
-        if self.track_offset > max(0, num_tracks - 8):
-            self.track_offset = max(0, num_tracks - 8)
+        if self.track_offset > max(0, num_tracks - 4):
+            self.track_offset = max(0, num_tracks - 4)
         
         # Update session highlighting
         self.session.set_offsets(self.track_offset, self.scene_offset)
@@ -113,15 +113,15 @@ class Grid_mixer_and_launch_control(ControlSurface):
         self._clip_launcher.update_clip_leds()
     
     def _setup_session(self):
-        """Setup session component for highlighting - 8×4 grid"""
-        self.log_message("Creating SessionComponent(8, 4) - 8 tracks × 4 scenes")
-        self.session = SessionComponent(8, 4)  # 8 tracks, 4 scenes
+        """Setup session component for highlighting - 4×4 grid"""
+        self.log_message("Creating SessionComponent(4, 4) - 4 tracks × 4 scenes")
+        self.session = SessionComponent(4, 4)  # 4 tracks, 4 scenes
         self.session.set_offsets(0, 0)
         
         try:
             self.set_highlighting_session_component(self.session)
             self.session.set_highlighting_enabled(True)
-            self.log_message("SessionComponent 8×4 ACTIVE - Red box should be 8 wide!")
+            self.log_message("SessionComponent 4×4 ACTIVE - Red box should be 4 wide!")
         except:
             pass
     

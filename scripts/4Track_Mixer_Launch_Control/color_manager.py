@@ -19,20 +19,13 @@ class ColorManager:
     
     def _setup_color_controls(self):
         """
-        RGB colors on 3 channels - 2 separate 4×4 modules:
+        RGB colors on 3 channels - single 4×4 module:
         Module 1: CC 60-75 (4×4 = 16 CCs)
-        Module 2: CC 76-91 (4×4 = 16 CCs)
         """
         for row in range(GRID_ROWS):
             for col in range(GRID_COLS):
-                # Module 1 (col 0-3): CC 60-75
-                # Module 2 (col 4-7): CC 76-91
-                if col < 4:
-                    # Module 1: 4×4 grid starting at CC 60
-                    cc_num = COLOR_CC_START + row * 4 + col
-                else:
-                    # Module 2: 4×4 grid starting at CC 76
-                    cc_num = 76 + row * 4 + (col - 4)
+                # Single 4×4 grid starting at CC 60
+                cc_num = COLOR_CC_START + row * 4 + col
                 
                 # Red channel
                 red_control = SliderElement(MIDI_CC_TYPE, RED_CHANNEL, cc_num)

@@ -18,37 +18,24 @@ BLUE_CHANNEL = 3
 TRIGGER_CHANNEL = 0
 CLIP_LAUNCH_CHANNEL = 4  # Clip launch buttons on channel 5 (0-indexed, so 4 = MIDI Ch 5)
 
-# Clip launch notes - 2 separate 4×4 modules
-# Module 1: Note 60-75 (col 0-3)
-# Module 2: Note 76-91 (col 4-7)
-CLIP_NOTE_START = 60  # First module starts at Note 60
+# Clip launch notes - single 4×4 module
+# Note 60-75 (4×4 = 16 notes)
+CLIP_NOTE_START = 60  # Module starts at Note 60
 
-# Mixer CCs - Module 1 (Tracks 0-3)
+# Mixer CCs (Tracks 0-3)
 VOLUME_CC_START = 44
 PAN_CC_START = 40
 SEND_A_CC_START = 32
 SEND_B_CC_START = 36
 
-# Mixer buttons - Module 1 (Tracks 0-3)
+# Mixer buttons (Tracks 0-3)
 MUTE_NOTE_START = 32
 SOLO_NOTE_START = 36
 ARM_NOTE_START = 40
 
-# Mixer CCs - Module 2 (Tracks 4-7)
-VOLUME_CC_START_2 = 60
-PAN_CC_START_2 = 56
-SEND_A_CC_START_2 = 48
-SEND_B_CC_START_2 = 52
-
-# Mixer buttons - Module 2 (Tracks 4-7)
-MUTE_NOTE_START_2 = 48
-SOLO_NOTE_START_2 = 52
-ARM_NOTE_START_2 = 56
-
-# Color CCs - 2 separate 4×4 modules (32 clips total)
-# Module 1: CC 60-75 (col 0-3)
-# Module 2: CC 76-91 (col 4-7)
-COLOR_CC_START = 60  # First module starts at CC 60
+# Color CCs - single 4×4 module (16 clips total)
+# CC 60-75 (4×4 = 16 CCs)
+COLOR_CC_START = 60  # Module starts at CC 60
 
 # Navigation buttons
 TRACK_LEFT_NOTE = 44      # 1 track left
